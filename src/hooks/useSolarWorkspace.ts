@@ -1,85 +1,58 @@
-import { useState, useMemo, useCallback } from 'react';
-import { PANEL_MODELS } from '@/types';
-import type { SolarPanel, Obstacle } from '@/types';
-import type { ObstacleType } from '@/types';
-
-/**
- * Core hook for managing the solar design workspace state.
- * Handles the mapping of AI-detected obstacles from relative to absolute coordinates,
- * manages the solar panel array, and handles auto-layout logic.
- * 
- * @param detectedObstacles - Raw obstacle data returned from the OpenAI vision model.
- * @returns State and handlers for the solar panels, 3D view toggle, and obstacle mapping.
- */
+import { usePanelModels } from "@/context/PanelModelsContext";
+import type { ProjectSettings } from "@/types";
+import { useState } from "react";
+import { useAutoLayout } from "./useAutoLayout";
+import { useObstacles } from "./useObstacles";
+import { usePanels } from "./usePanels";
 
 export function useSolarWorkspace() {
-  const [panels, setPanels] = useState<SolarPanel[]>([]);
-  const [obstacles, setObstacles] = useState<Obstacle[]>([]);
-  const [selectedModelId, setSelectedModelId] = useState<string>(PANEL_MODELS[0].id);
-  const [activePanelId, setActivePanelId] = useState<string | null>(null);
-  const [activeObstacleId, setActiveObstacleId] = useState<string | null>(null);
+  const { panelModels } = usePanelModels();
+
+  const [selectedModelId, setSelectedModelId] = useState<string>(
+    panelModels.length > 0 ? panelModels[0].id : "",
+  );
+
   const [showGrid, setShowGrid] = useState<boolean>(false);
 
-  const selectedModel = useMemo(() => PANEL_MODELS.find(m => m.id === selectedModelId) || PANEL_MODELS[0], [selectedModelId]);
+  const [projectSettings, setProjectSettings] = useState<ProjectSettings>({
+    azimuth: "South",
+    pitch: 20,
+  });
 
-  const handleAddPanel = useCallback(() => {
-    const canvasWidth = window.innerWidth - 320;
-    const canvasHeight = window.innerHeight;
-    const newPanel: SolarPanel = {
-      id: Math.random().toString(36).substr(2, 9),
-      position: { x: canvasWidth / 2, y: canvasHeight / 2 },
-      rotation: 0,
-      modelId: selectedModel.id,
-      wattage: selectedModel.wattage,
-      width: selectedModel.width,
-      height: selectedModel.height
-    };
-    setPanels(prev => [...prev, newPanel]);
-  }, [selectedModel]);
+  const {
+    panels,
+    activePanelId,
+    setActivePanelId,
+    handleAddPanel,
+    handleUpdatePanel,
+    handleRemovePanel,
+    handleClearPanels,
+    setRawPanels,
+  } = usePanels(panelModels, selectedModelId);
 
-  const handleUpdatePanel = useCallback((id: string, updates: Partial<SolarPanel>) => {
-    setPanels(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
-  }, []);
+  const {
+    obstacles,
+    activeObstacleId,
+    setActiveObstacleId,
+    handleAddObstacle,
+    handleUpdateObstacle,
+    handleRemoveObstacle,
+    handleClearObstacles,
+  } = useObstacles();
 
-  const handleAddObstacle = useCallback((type: ObstacleType, name?: string) => {
-    const canvasWidth = window.innerWidth - 320;
-    const canvasHeight = window.innerHeight;
-    
-    let width = 60;
-    let height = 60;
-    if (type === 'tree') { width = 120; height = 120; }
-    if (type === 'chimney') { width = 40; height = 40; }
-    if (type === 'vent') { width = 30; height = 30; }
+  const selectedModel = panelModels.find((m) => m.id === selectedModelId) || panelModels[0];
 
-    const newObstacle: Obstacle = {
-      id: `manual_obs_${Math.random().toString(36).substr(2, 9)}`,
-      type,
-      name,
-      position: { x: canvasWidth / 2 - (width / 2), y: canvasHeight / 2 - (height / 2) },
-      width,
-      height,
-      borderRadius: type === 'tree' ? 50 : 0
-    };
-    
-    setObstacles(prev => [...prev, newObstacle]);
-  }, []);
+  // Assuming the roof image is 80% of the canvas centered
+  const canvasWidth = window.innerWidth - 320;
+  const canvasHeight = window.innerHeight;
+  const imageBounds = {
+    x: canvasWidth * 0.1,
+    y: canvasHeight * 0.1,
+    w: canvasWidth * 0.8,
+    h: canvasHeight * 0.8,
+  };
 
-  const handleUpdateObstacle = useCallback((id: string, updates: Partial<Obstacle>) => {
-    setObstacles(prev => prev.map(o => o.id === id ? { ...o, ...updates } : o));
-  }, []);
-  
-  const handleRemovePanel = useCallback((id: string) => {
-    setPanels(prev => prev.filter(p => p.id !== id));
-  }, []);
-
-  const handleClearPanels = useCallback(() => {
-    setPanels([]);
-    setActivePanelId(null);
-  }, []);
-
-  const handleRemoveObstacle = useCallback((id: string) => {
-    setObstacles(prev => prev.filter(o => o.id !== id));
-  }, []);
+  const handleAutoLayout = useAutoLayout(obstacles, selectedModel, imageBounds, setRawPanels);
 
   return {
     panels,
@@ -91,13 +64,17 @@ export function useSolarWorkspace() {
     activeObstacleId,
     setActiveObstacleId,
     handleAddPanel,
+    handleAutoLayout,
     handleUpdatePanel,
     handleRemovePanel,
     handleAddObstacle,
     handleUpdateObstacle,
     handleRemoveObstacle,
+    handleClearObstacles,
     handleClearPanels,
     showGrid,
-    setShowGrid
+    setShowGrid,
+    projectSettings,
+    setProjectSettings,
   };
 }

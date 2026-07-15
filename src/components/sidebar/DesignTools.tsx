@@ -1,29 +1,37 @@
-import { Plus } from 'lucide-react';
+import { Plus, LayoutGrid } from 'lucide-react';
 import { Button } from '../ui/Button';
 
 interface DesignToolsProps {
   onAddPanel: () => void;
+  onAutoLayout: () => void;
   onClearPanels?: () => void;
+  hasPanels: boolean;
 }
 
 export function DesignTools({
   onAddPanel,
-  onClearPanels
+  onAutoLayout,
+  onClearPanels,
+  hasPanels
 }: DesignToolsProps) {
   return (
     <>
-      <h3 className="text-sm font-medium text-text-secondary uppercase tracking-wide">Design Tools</h3>
-      
-      <Button variant="secondary" onClick={onAddPanel} fullWidth>
-        <Plus size={18} />
-        Add Single Panel
-      </Button>
+      <div className="flex gap-2">
+        <Button variant="secondary" onClick={onAddPanel} fullWidth>
+          <Plus size={18} />
+          Single
+        </Button>
+        <Button variant="secondary" onClick={onAutoLayout} fullWidth>
+          <LayoutGrid size={18} />
+          Auto Fill
+        </Button>
+      </div>
 
-      <Button variant="danger" onClick={onClearPanels} fullWidth>
-        Clear All Panels
-      </Button>
-      
-      <div className="h-px bg-border-color my-2" />
+      {hasPanels && (
+        <Button variant="danger" onClick={onClearPanels} fullWidth className="mt-2">
+          Clear All Panels
+        </Button>
+      )}
     </>
   );
 }

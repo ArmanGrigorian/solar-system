@@ -1,12 +1,14 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useState } from 'react';
 import { HUDOverlay } from '@/components/HUDOverlay';
 import { ObstacleItem } from '@/components/ObstacleItem';
 import { PanelItem } from '@/components/PanelItem';
 import { useCanvasWorkspace } from '@/hooks/useCanvasWorkspace';
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
+import { useMouseCoords } from '@/hooks/useMouseCoords';
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import { useMetrics } from '@/hooks/useMetrics';
 import { FinancialSummary } from '@/components/analytics/FinancialSummary';
-import type { SolarPanel, Obstacle } from '@/types';
+import type { SolarPanel, Obstacle, ProjectSettings } from '@/types';
 
 interface CanvasWorkspaceProps {
   roofImage: string;
@@ -21,6 +23,7 @@ interface CanvasWorkspaceProps {
   onUpdateObstacle: (id: string, updates: Partial<Obstacle>) => void;
   onRemoveObstacle: (id: string) => void;
   showGrid?: boolean;
+  projectSettings: ProjectSettings;
 }
 
 export function CanvasWorkspace({ 
@@ -35,11 +38,12 @@ export function CanvasWorkspace({
   onRemovePanel, 
   onUpdateObstacle,
   onRemoveObstacle,
-  showGrid = false
+  showGrid = false,
+  projectSettings
 }: CanvasWorkspaceProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [cameraScale, setCameraScale] = useState(1);
-  const [mouseCoords, setMouseCoords] = useState({ x: 0, y: 0 });
+  const { mouseCoords, handleMouseMove } = useMouseCoords(cameraScale);
   
   const { dragError, handleDragEnd, handleObstacleDragEnd, handleObstacleResizeEnd } = useCanvasWorkspace(
     panels,
@@ -49,25 +53,16 @@ export function CanvasWorkspace({
     cameraScale
   );
 
-  const metrics = useMetrics(panels);
+  const metrics = useMetrics(panels, projectSettings);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (document.activeElement?.tagName === 'INPUT') return;
-        
-        if (activePanelId) {
-          onRemovePanel(activePanelId);
-          setActivePanelId(null);
-        } else if (activeObstacleId) {
-          onRemoveObstacle(activeObstacleId);
-          setActiveObstacleId(null);
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activePanelId, activeObstacleId, onRemovePanel, onRemoveObstacle, setActivePanelId, setActiveObstacleId]);
+  useKeyboardShortcuts({
+    activePanelId,
+    activeObstacleId,
+    onRemovePanel,
+    onRemoveObstacle,
+    setActivePanelId,
+    setActiveObstacleId
+  });
 
   return (
     <div 
@@ -94,12 +89,7 @@ export function CanvasWorkspace({
               setActivePanelId(null);
               setActiveObstacleId(null);
             }}
-            onMouseMove={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              const x = Math.round((e.clientX - rect.left) / cameraScale);
-              const y = Math.round((e.clientY - rect.top) / cameraScale);
-              setMouseCoords({ x, y });
-            }}
+            onMouseMove={handleMouseMove}
           >
             {/* Background Image */}
             <div 

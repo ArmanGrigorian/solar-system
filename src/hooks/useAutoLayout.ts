@@ -15,60 +15,98 @@ export function useAutoLayout(
       const newPanels: SolarPanel[] = [];
       const visited = new Set<string>();
       
-      const startX = imageBounds.x + (imageBounds.w / 2) - (selectedModel.width / 2);
-      const startY = imageBounds.y + (imageBounds.h / 2) - (selectedModel.height / 2);
-      
-      const queue = [{ x: startX, y: startY }];
-      let panelIdCounter = 0;
-      
+      const visualWidth = selectedModel.width;
+      const visualHeight = selectedModel.height;
+      const rotationDegree = 0;
+
       const gap = 5;
-      const stepX = selectedModel.width + gap;
-      const stepY = selectedModel.height + gap;
+      const stepX = visualWidth + gap;
+      const stepY = visualHeight + gap;
+
+      const startVx = imageBounds.x + (imageBounds.w / 2) - (visualWidth / 2);
+      const startVy = imageBounds.y + (imageBounds.h / 2) - (visualHeight / 2);
+      
+      const queue = [{ vx: startVx, vy: startVy }];
+      let panelIdCounter = 0;
 
       while (queue.length > 0 && newPanels.length < 200) {
-        const { x, y } = queue.shift()!;
-        const key = `${Math.round(x)},${Math.round(y)}`;
+        const { vx, vy } = queue.shift()!;
+        const key = `${Math.round(vx)},${Math.round(vy)}`;
         
         if (visited.has(key)) continue;
         visited.add(key);
 
+        // Check bounds using visual coordinates
+        let isValid = true;
+        if (vx < imageBounds.x || vy < imageBounds.y || 
+            vx + visualWidth > imageBounds.x + imageBounds.w || 
+            vy + visualHeight > imageBounds.y + imageBounds.h) {
+          isValid = false;
+        }
+
+        // Calculate actual unrotated x, y for the panel
+        const cx = vx + visualWidth / 2;
+        const cy = vy + visualHeight / 2;
+        const x = cx - selectedModel.width / 2;
+        const y = cy - selectedModel.height / 2;
+
         const newRect = { x, y, w: selectedModel.width, h: selectedModel.height };
-        const newPoly = getRotatedRectVertices(newRect, 0);
-        
-        if (x < imageBounds.x || y < imageBounds.y || (x + newRect.w) > (imageBounds.x + imageBounds.w) || (y + newRect.h) > (imageBounds.y + imageBounds.h)) {
-          continue;
+        const newPoly = getRotatedRectVertices(newRect, rotationDegree);
+
+        if (isValid) {
+          for (const obs of obstacles) {
+            const obsPoly = getRotatedRectVertices(
+              { x: obs.position.x, y: obs.position.y, w: obs.width, h: obs.height }, 
+              0
+            );
+            if (checkPolygonIntersection(newPoly, obsPoly)) {
+              isValid = false;
+              break;
+            }
+          }
         }
         
-        const hitsObstacle = obstacles.some(obs => {
-          const obsPoly = getRotatedRectVertices({ x: obs.position.x, y: obs.position.y, w: obs.width, h: obs.height }, 0);
-          return checkPolygonIntersection(newPoly, obsPoly);
-        });
+        if (isValid) {
+          for (const p of prevPanels) {
+            const pPoly = getRotatedRectVertices(
+              { x: p.position.x, y: p.position.y, w: p.width, h: p.height }, 
+              p.rotation
+            );
+            if (checkPolygonIntersection(newPoly, pPoly)) {
+              isValid = false;
+              break;
+            }
+          }
+        }
         
-        const hitsPrevPanel = prevPanels.some(p => {
-          const pPoly = getRotatedRectVertices({ x: p.position.x, y: p.position.y, w: p.width, h: p.height }, p.rotation);
-          return checkPolygonIntersection(newPoly, pPoly);
-        });
+        if (isValid) {
+          for (const p of newPanels) {
+            const pPoly = getRotatedRectVertices(
+              { x: p.position.x, y: p.position.y, w: p.width, h: p.height }, 
+              p.rotation
+            );
+            if (checkPolygonIntersection(newPoly, pPoly)) {
+              isValid = false;
+              break;
+            }
+          }
+        }
         
-        const hitsNewPanel = newPanels.some(p => {
-          const pPoly = getRotatedRectVertices({ x: p.position.x, y: p.position.y, w: p.width, h: p.height }, p.rotation);
-          return checkPolygonIntersection(newPoly, pPoly);
-        });
-        
-        if (!hitsObstacle && !hitsPrevPanel && !hitsNewPanel) {
+        if (isValid) {
           newPanels.push({
             id: `auto_${panelIdCounter++}_${Math.random().toString(36).substr(2, 5)}`,
             position: { x, y },
-            rotation: 0,
+            rotation: rotationDegree,
             modelId: selectedModel.id,
             wattage: selectedModel.wattage,
             width: selectedModel.width,
             height: selectedModel.height
           });
           
-          queue.push({ x: x + stepX, y });
-          queue.push({ x: x - stepX, y });
-          queue.push({ x, y: y + stepY });
-          queue.push({ x, y: y - stepY });
+          queue.push({ vx: vx + stepX, vy });
+          queue.push({ vx: vx - stepX, vy });
+          queue.push({ vx, vy: vy + stepY });
+          queue.push({ vx, vy: vy - stepY });
         }
       }
       

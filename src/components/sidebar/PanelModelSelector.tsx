@@ -1,4 +1,4 @@
-import { PANEL_MODELS } from '@/types';
+import { usePanelModels } from "@/context/PanelModelsContext";
 
 interface PanelModelSelectorProps {
   selectedModelId: string;
@@ -6,19 +6,20 @@ interface PanelModelSelectorProps {
 }
 
 export function PanelModelSelector({ selectedModelId, onModelChange }: PanelModelSelectorProps) {
+  const { panelModels } = usePanelModels();
+
   return (
     <>
-      <h3 className="text-sm font-medium text-text-secondary uppercase tracking-wide">Panel Model</h3>
-      <select 
+      <select
         value={selectedModelId}
         onChange={(e) => onModelChange(e.target.value)}
-        className="bg-glass-bg text-text-primary border border-border-color p-3 rounded-sm font-sans outline-none"
-      >
-        {PANEL_MODELS.map(m => (
-          <option key={m.id} value={m.id}>{m.manufacturer} - {m.name}</option>
+        className="bg-bg-panel text-text-primary border border-border-color hover:border-accent-primary focus:border-accent-primary focus:ring-1 focus:ring-accent-primary p-3 rounded-sm font-sans outline-none transition-all cursor-pointer">
+        {panelModels.map((m) => (
+          <option key={m.id} value={m.id}>
+            {m.manufacturer} - {m.name}
+          </option>
         ))}
       </select>
-      <div className="h-px bg-border-color my-2" />
     </>
   );
 }

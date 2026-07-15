@@ -1,54 +1,60 @@
-import { useState } from 'react';
-import { AlertTriangle } from 'lucide-react';
-import type { ObstacleType } from '@/types';
-import { Button } from '../ui/Button';
+import type { ObstacleType } from "@/types";
+import { AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { Button } from "../ui/Button";
 
 interface ManualObstaclesFormProps {
   onAddObstacle: (type: ObstacleType, name?: string) => void;
+  onClearObstacles?: () => void;
+  hasObstacles: boolean;
 }
 
-export function ManualObstaclesForm({ onAddObstacle }: ManualObstaclesFormProps) {
-  const [manualObstacleType, setManualObstacleType] = useState<ObstacleType>('tree');
-  const [manualObstacleName, setManualObstacleName] = useState('');
+export function ManualObstaclesForm({
+  onAddObstacle,
+  onClearObstacles,
+  hasObstacles,
+}: ManualObstaclesFormProps) {
+  const [manualObstacleType, setManualObstacleType] = useState<ObstacleType>("tree");
+  const [manualObstacleName, setManualObstacleName] = useState("");
 
   return (
     <>
-      <h3 className="text-sm font-medium text-text-secondary uppercase tracking-wide">Manual Obstacles</h3>
-      
       <div className="flex gap-2">
-        <select 
+        <select
           value={manualObstacleType}
           onChange={(e) => setManualObstacleType(e.target.value as ObstacleType)}
-          className="min-w-0 bg-glass-bg text-text-primary border border-border-color p-2 rounded-sm outline-none"
-        >
+          className="min-w-0 bg-bg-panel text-text-primary border border-border-color hover:border-accent-primary focus:border-accent-primary focus:ring-1 focus:ring-accent-primary p-2 rounded-sm outline-none transition-all cursor-pointer">
           <option value="tree">Tree</option>
           <option value="chimney">Chimney</option>
           <option value="vent">Vent</option>
           <option value="hvac">HVAC</option>
           <option value="skylight">Skylight</option>
         </select>
-        <input 
-          type="text" 
-          placeholder="Name (opt)" 
+        <input
+          type="text"
+          placeholder="Name (opt)"
           value={manualObstacleName}
           onChange={(e) => setManualObstacleName(e.target.value)}
-          className="flex-1 min-w-0 bg-glass-bg text-text-primary border border-border-color p-2 rounded-sm outline-none"
+          className="flex-1 min-w-0 bg-bg-panel text-text-primary border border-border-color hover:border-accent-primary focus:border-accent-primary focus:ring-1 focus:ring-accent-primary p-2 rounded-sm outline-none transition-all placeholder-text-muted"
         />
       </div>
-      
-      <Button 
+
+      <Button
         variant="secondary"
         onClick={() => {
           onAddObstacle(manualObstacleType, manualObstacleName || undefined);
-          setManualObstacleName('');
+          setManualObstacleName("");
         }}
-        fullWidth
-      >
+        fullWidth>
         <AlertTriangle size={18} />
         Add Obstacle
       </Button>
-      
-      <div className="h-px bg-border-color my-4" />
+
+      {hasObstacles && (
+        <Button variant="danger" onClick={onClearObstacles} fullWidth className="mt-2">
+          Clear All Obstacles
+        </Button>
+      )}
     </>
   );
 }

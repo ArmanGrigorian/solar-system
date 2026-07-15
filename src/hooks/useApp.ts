@@ -11,6 +11,7 @@ import { useState } from 'react';
 export function useApp() {
   const [roofImages, setRoofImages] = useState<string[]>([]);
   const [base64Image, setBase64Image] = useState<string | null>(null);
+  const [isEditingAdmin, setIsEditingAdmin] = useState(false);
 
   const handleUploadComplete = (urls: string[], base64: string) => {
     setRoofImages(urls);
@@ -22,10 +23,14 @@ export function useApp() {
     setBase64Image(null);
   };
 
+  const toggleAdmin = () => setIsEditingAdmin(!isEditingAdmin);
+
   return {
     roofImages,
     base64Image,
+    isEditingAdmin,
     handleUploadComplete,
-    handleReset
+    handleReset,
+    toggleAdmin
   };
 }
